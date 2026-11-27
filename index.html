@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Hadir Pengawas Ujian - MTsN 4 Kerinci</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tinos:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --kemenag-green: #0b6b3a;
+            --kemenag-green-dark: #074b28;
+            --kemenag-gold: #eab308;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+
+        .kop-serif {
+            font-family: 'Tinos', Georgia, serif;
+        }
+
+        /* Kanvas Tanda Tangan Responsif */
+        .signature-pad-wrap {
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Kertas Pratinjau A4 */
+        .a4-sheet {
+            width: 100%;
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 12mm;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+            border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 640px) {
+            .a4-sheet {
+                padding: 8mm;
+                min-height: auto;
+            }
+        }
+
+        .doc-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .doc-table th,
+        .doc-table td {
+            border: 1px solid #1e293b;
+            padding: 6px 7px;
+            vertical-align: middle;
+        }
+
+        .doc-table th {
+            background-color: #ecfdf5;
+            color: #064e3b;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .doc-table thead {
+            display: table-header-group;
+        }
+
+        .doc-table tr,
+        .sig-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Aturan Cetak & Ekspor PDF Resmi A4 */
+        @page {
+            size: A4 portrait;
+            margin: 12mm;
+        }
+
+        @media print {
+            body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            #tab-preview {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            .a4-sheet {
+                max-width: none !important;
+                width: 100% !important;
+                min-height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            .doc-table th {
+                background-color: #f1f5f9 !important;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .kop-border-double {
+                border-bottom: 3px solid #000000 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Toast Notifikasi Non-Blocking -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none no-print"></div>
+
+    <!-- Modal Konfirmasi Custom (Pengganti confirm()) -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-6">
+            <h3 id="confirm-title" class="text-lg font-bold text-slate-900">Konfirmasi Tindakan</h3>
+            <p id="confirm-message" class="text-sm text-slate-600 mt-2"></p>
+            <div class="mt-6 flex justify-end gap-2.5">
+                <button id="confirm-cancel-btn" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Batal</button>
+                <button id="confirm-ok-btn" type="button" class="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 transition">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Edit Data Pengawas (Admin) -->
+    <div id="edit-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 my-8">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-900">Edit Data Kehadiran Pengawas</h3>
+                <button type="button" onclick="closeEditModal()" class="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="edit-proctor-form" onsubmit="saveEditedProctor(event)" class="mt-4 space-y-3 text-sm">
+                <input type="hidden" id="edit-id">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Nama Lengkap Pengawas *</label>
+                    <input type="text" id="edit-name" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">NIP / NUPTK</label>
+                        <input type="text" id="edit-nip" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Ruang Ujian *</label>
+                        <input type="text" id="edit-room" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Mata Pelajaran *</label>
+                        <input type="text" id="edit-subject" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Sesi *</label>
+                        <input type="text" id="edit-session" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Hari / Tanggal *</label>
+                        <input type="text" id="edit-date-label" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-700 mb-1">Jam Hadir</label>
+                        <input type="time" id="edit-arrival-time" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Catatan</label>
+                    <input type="text" id="edit-notes" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                </div>
+                <div class="pt-3 flex justify-end gap-2">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl font-semibold text-white bg-emerald-700 hover:bg-emerald-800 transition">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Header Utama Aplikasi -->
+    <header class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 text-white shadow-lg border-b-4 border-amber-400 no-print">
+        <div class="max-w-6xl mx-auto px-4 py-4 sm:py-5">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/95 p-1.5 shadow-md flex items-center justify-center shrink-0 kemenag-logo-slot"></div>
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-300 bg-emerald-950/70 px-2.5 py-0.5 rounded-full border border-amber-400/30">
+                            <span>Kementerian Agama Kab. Kerinci</span>
+                        </div>
+                        <h1 class="text-lg sm:text-2xl font-extrabold tracking-tight mt-1">
+                            Daftar Hadir Pengawas Ujian • MTsN 4 Kerinci
+                        </h1>
+                        <p class="text-xs sm:text-sm text-emerald-100/90 mt-0.5">
+                            Jln. Bukit Siru Seleman, Kecamatan Danau Kerinci, Kabupaten Kerinci
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Ringkasan Cepat & Pintasan Pratinjau -->
+                <div class="flex items-center justify-between md:justify-end gap-3 bg-emerald-950/50 border border-emerald-700/60 rounded-2xl px-4 py-2.5">
+                    <div>
+                        <div class="text-[11px] uppercase tracking-wider text-emerald-200 font-semibold">Tercatat Hari Ini / Total</div>
+                        <div class="text-base sm:text-lg font-extrabold text-white">
+                            <span id="header-total-count">0</span> <span class="text-xs font-medium text-emerald-200">Pengawas</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="switchTab('preview')" class="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl shadow transition shrink-0">
+                        <i data-lucide="file-text" class="w-4 h-4"></i>
+                        <span>Pratinjau PDF</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigasi 3 Tab -->
+            <nav class="mt-5 grid grid-cols-3 gap-2 bg-emerald-950/60 p-1.5 rounded-2xl border border-emerald-700/50" aria-label="Navigasi Utama">
+                <button id="nav-form" type="button" onclick="switchTab('form')" class="tab-btn flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-white text-emerald-950 shadow">
+                    <i data-lucide="pen-tool" class="w-4 h-4"></i>
+                    <span>1. Form Pengawas</span>
+                </button>
+                <button id="nav-admin" type="button" onclick="switchTab('admin')" class="tab-btn flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition text-emerald-100 hover:bg-emerald-900/70">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <span>2. Panel Admin</span>
+                </button>
+                <button id="nav-preview" type="button" onclick="switchTab('preview')" class="tab-btn flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition text-emerald-100 hover:bg-emerald-900/70">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span>3. Pratinjau &amp; PDF A4</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Konten Utama -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
+
+        <!-- ===================================================================== -->
+        <!-- TAB 1: FORM PENGAWAS MANDIRI                                          -->
+        <!-- ===================================================================== -->
+        <section id="tab-form" class="space-y-6">
+            <!-- Banner Status Pengisian Mandiri -->
+            <div class="bg-white rounded-2xl shadow-sm border border-emerald-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div class="flex items-start sm:items-center gap-3">
+                    <div class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                        <i data-lucide="user-check" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wide text-emerald-700" id="form-exam-banner">Asesmen Sumatif Akhir Semester (ASAS) • TP 2026/2027</div>
+                        <h2 class="text-base sm:text-lg font-extrabold text-slate-900">Pengisian Kehadiran &amp; Tanda Tangan Pengawas</h2>
+                        <p class="text-xs sm:text-sm text-slate-600">Silakan tulis identitas Anda sendiri lalu bubuhkan tanda tangan pada kotak di bawah.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 shrink-0">
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500">Pengawas Tercatat</div>
+                        <div class="text-lg font-extrabold text-emerald-800" id="form-live-count">0 Orang</div>
+                    </div>
+                    <button type="button" onclick="switchTab('preview')" class="text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-3 py-2 rounded-lg transition">
+                        Lihat Daftar A4 →
+                    </button>
+                </div>
+            </div>
+
+            <!-- Formulir Pengawas -->
+            <form id="proctor-form" onsubmit="handleSaveProctor(event)" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-7 space-y-5">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="input-name" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Nama Lengkap Pengawas <span class="text-rose-600">*</span>
+                        </label>
+                        <input type="text" id="input-name" required placeholder="Contoh: Hj. Nuraini, S.Pd" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition">
+                    </div>
+
+                    <div>
+                        <label for="input-nip" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            NIP / NUPTK
+                        </label>
+                        <input type="text" id="input-nip" placeholder="Contoh: 197805122005012003 atau -" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Pilihan Ruang Ujian (Ruang 01 - Ruang 12 atau Manual) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="select-room" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Ruang Ujian <span class="text-rose-600">*</span>
+                        </label>
+                        <select id="select-room" onchange="handleRoomSelectChange()" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition">
+                            <option value="Ruang 01">Ruang 01</option>
+                            <option value="Ruang 02">Ruang 02</option>
+                            <option value="Ruang 03">Ruang 03</option>
+                            <option value="Ruang 04">Ruang 04</option>
+                            <option value="Ruang 05">Ruang 05</option>
+                            <option value="Ruang 06">Ruang 06</option>
+                            <option value="Ruang 07">Ruang 07</option>
+                            <option value="Ruang 08">Ruang 08</option>
+                            <option value="Ruang 09">Ruang 09</option>
+                            <option value="Ruang 10">Ruang 10</option>
+                            <option value="Ruang 11">Ruang 11</option>
+                            <option value="Ruang 12">Ruang 12</option>
+                            <option value="__MANUAL__">Ketik Ruang Manual...</option>
+                        </select>
+                        <input type="text" id="input-room-manual" placeholder="Ketik nama/nomor ruang manual, misal: Ruang Lab IPA" class="mt-2 hidden w-full rounded-xl border border-emerald-400 bg-emerald-50/40 px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-600 outline-none">
+                    </div>
+
+                    <div>
+                        <label for="input-subject" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Mata Pelajaran Diujikan <span class="text-rose-600">*</span>
+                        </label>
+                        <input type="text" id="input-subject" required placeholder="Contoh: Bahasa Indonesia / Matematika" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 focus:border-emerald-600 outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Tanggal (Auto Format Hari & Tanggal Indonesia), Sesi & Jam Hadir -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label for="input-date-picker" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Hari / Tanggal <span class="text-rose-600">*</span>
+                        </label>
+                        <input type="date" id="input-date-picker" required onchange="syncIndonesianDate()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none">
+                        <p id="formatted-date-preview" class="text-xs font-semibold text-emerald-800 mt-1"></p>
+                    </div>
+
+                    <div>
+                        <label for="input-session" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Sesi Ujian <span class="text-rose-600">*</span>
+                        </label>
+                        <select id="input-session" onchange="syncSessionTimePreview()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm bg-white focus:ring-2 focus:ring-emerald-600 outline-none">
+                            <option value="SESI PERTAMA (08.00 – 09.00)">SESI PERTAMA (08.00 – 09.00)</option>
+                            <option value="SESI KEDUA (09.00 – 10.00)">SESI KEDUA (09.00 – 10.00)</option>
+                            <option value="SESI KETIGA (10.15 – 11.15)">SESI KETIGA (10.15 – 11.15)</option>
+                        </select>
+                        <p id="session-time-preview" class="text-xs font-semibold text-emerald-800 mt-1">Waktu Ujian: 08.00 – 09.00 WIB</p>
+                    </div>
+
+                    <div>
+                        <label for="input-arrival-time" class="block text-sm font-bold text-slate-800 mb-1.5">
+                            Jam Hadir <span class="text-rose-600">*</span>
+                        </label>
+                        <div class="flex gap-1.5">
+                            <input type="time" id="input-arrival-time" required class="w-full rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none">
+                            <button type="button" onclick="setCurrentArrivalTime()" title="Isi Jam Sekarang" class="px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition shrink-0">
+                                Kini
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Catatan Opsional -->
+                <div>
+                    <label for="input-notes" class="block text-sm font-bold text-slate-800 mb-1.5">
+                        Catatan / Keterangan (Opsional)
+                    </label>
+                    <input type="text" id="input-notes" placeholder="Contoh: Lengkap / Tertib / Naskah aman" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-600 outline-none">
+                </div>
+
+                <!-- Area Tanda Tangan Digital HTML5 Canvas -->
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-800">
+                                Tanda Tangan Digital Pengawas <span class="text-rose-600">*</span>
+                            </label>
+                            <p class="text-xs text-slate-500">Gunakan jari di layar sentuh atau mouse/stylus di dalam kotak tanda tangan.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="undoSignatureStroke()" class="inline-flex items-center gap-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-lg transition">
+                                <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+                                <span>Undo Goresan</span>
+                            </button>
+                            <button type="button" onclick="clearSignatureCanvas()" class="inline-flex items-center gap-1 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-1.5 rounded-lg transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <span>Hapus</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="signature-pad-wrap bg-white border-2 border-dashed border-emerald-400 rounded-xl overflow-hidden relative h-44 sm:h-48">
+                        <canvas id="signature-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+                        <div class="pointer-events-none absolute bottom-2 right-3 text-[11px] text-slate-400 font-medium">
+                            Tanda tangan di sini
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tombol Simpan & Lanjut Pengawas Berikutnya -->
+                <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <p class="text-xs text-slate-500">
+                        Setelah disimpan, formulir akan otomatis disiapkan untuk pengawas berikutnya.
+                    </p>
+                    <button type="submit" class="inline-flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 active:scale-[0.99] text-white font-extrabold text-sm sm:text-base px-6 py-3.5 rounded-xl shadow-md transition">
+                        <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                        <span>Simpan Kehadiran &amp; Lanjut Pengawas Berikutnya</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Daftar Terbaru Singkat di Bawah Form -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-slate-900 text-sm sm:text-base">Rekap Cepat Pengawas Terbaru</h3>
+                    <button type="button" onclick="switchTab('preview')" class="text-xs font-bold text-emerald-700 hover:underline">Buka Pratinjau Lengkap A4</button>
+                </div>
+                <div id="recent-entries-list" class="divide-y divide-slate-100 text-sm">
+                    <p class="text-slate-400 py-4 text-center text-xs">Belum ada data kehadiran pengawas yang tersimpan.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 2: PANEL ADMIN (TERPROTEKSI PIN)                                  -->
+        <!-- ===================================================================== -->
+        <section id="tab-admin" class="hidden space-y-6">
+
+            <!-- Layar Kunci PIN Admin -->
+            <div id="admin-lock-screen" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-10 max-w-md mx-auto text-center">
+                <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="lock" class="w-7 h-7"></i>
+                </div>
+                <h2 class="text-xl font-extrabold text-slate-900">Akses Panel Admin</h2>
+                <p class="text-sm text-slate-600 mt-1">Masukkan PIN Admin untuk mengelola data, pengaturan kop/penanda tangan, dan ekspor dokumen.</p>
+                <p class="text-xs text-emerald-700 font-semibold mt-2 bg-emerald-50 inline-block px-3 py-1 rounded-full">PIN Default: 1234</p>
+
+                <form onsubmit="handleAdminUnlock(event)" class="mt-5 space-y-3">
+                    <input type="password" id="admin-pin-input" required placeholder="Masukkan PIN Admin" class="w-full text-center tracking-widest text-lg font-bold rounded-xl border border-slate-300 px-4 py-2.5 focus:ring-2 focus:ring-emerald-600 outline-none">
+                    <button type="submit" class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-3 rounded-xl shadow transition">
+                        Buka Panel Admin
+                    </button>
+                </form>
+            </div>
+
+            <!-- Konten Admin Setelah Terbuka -->
+            <div id="admin-dashboard" class="hidden space-y-6">
+
+                <!-- Toolbar Atas Admin -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div>
+                        <div class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>Mode Admin Aktif</span>
+                        </div>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 mt-1">Manajemen Kehadiran &amp; Pengaturan Dokumen</h2>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" onclick="generateTwentyDemoData()" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-900 bg-amber-300 hover:bg-amber-400 px-3.5 py-2.5 rounded-xl shadow-xs transition">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                            <span>Isi 20 Data Demo</span>
+                        </button>
+                        <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-3.5 py-2.5 rounded-xl shadow-xs transition">
+                            <i data-lucide="printer" class="w-4 h-4"></i>
+                            <span>Cetak / Simpan PDF (A4)</span>
+                        </button>
+                        <button type="button" onclick="lockAdminPanel()" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2.5 rounded-xl transition">
+                            <i data-lucide="lock" class="w-4 h-4"></i>
+                            <span>Kunci</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Kartu Statistik Ringkasan -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-xs font-bold text-slate-500 uppercase">Total Hadir</div>
+                        <div id="stat-total" class="text-2xl sm:text-3xl font-extrabold text-emerald-900 mt-1">0</div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-xs font-bold text-slate-500 uppercase">Jumlah Ruang</div>
+                        <div id="stat-rooms" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-xs font-bold text-slate-500 uppercase">Jumlah Sesi</div>
+                        <div id="stat-sessions" class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">0</div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                        <div class="text-xs font-bold text-slate-500 uppercase">Filter Aktif</div>
+                        <div id="stat-filtered" class="text-2xl sm:text-3xl font-extrabold text-emerald-700 mt-1">0</div>
+                    </div>
+                </div>
+
+                <!-- Pengaturan Kop Madrasah, Penanda Tangan, Ketua Panitia, PIN & Logo Kemenag -->
+                <details open class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+                    <summary class="font-bold text-slate-900 text-base sm:text-lg cursor-pointer flex items-center gap-2 select-none">
+                        <i data-lucide="settings" class="w-5 h-5 text-emerald-700"></i>
+                        <span>Pengaturan Kop Madrasah, Penanda Tangan, Ketua Ujian, PIN &amp; Logo Kemenag</span>
+                    </summary>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4 pt-4 border-t border-slate-100 text-sm">
+                        <div class="lg:col-span-2">
+                            <label for="meta-exam-title" class="block font-semibold text-slate-700 mb-1">Nama Kegiatan Ujian</label>
+                            <input type="text" id="meta-exam-title" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="Asesmen Sumatif Akhir Semester (ASAS) Tahun Pelajaran 2026/2027">
+                        </div>
+
+                        <div>
+                            <label for="meta-academic-year" class="block font-semibold text-slate-700 mb-1">Tahun Pelajaran</label>
+                            <input type="text" id="meta-academic-year" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="2026/2027">
+                        </div>
+
+                        <div class="lg:col-span-2">
+                            <label for="meta-address" class="block font-semibold text-slate-700 mb-1">Alamat Madrasah (Kop Surat)</label>
+                            <input type="text" id="meta-address" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="Jln. Bukit Siru Seleman, Kecamatan Danau Kerinci, Kabupaten Kerinci">
+                        </div>
+
+                        <div>
+                            <label for="meta-sign-date" class="block font-semibold text-slate-700 mb-1">Tempat &amp; Tanggal Pengesahan</label>
+                            <input type="text" id="meta-sign-date" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="Danau Kerinci, 27 November 2026">
+                        </div>
+
+                        <!-- Penanda Tangan Utama (Bisa Diedit Jabatan, Nama, dan NIP) -->
+                        <div>
+                            <label for="meta-headmaster-role" class="block font-semibold text-slate-700 mb-1">Jabatan Penanda Tangan Utama</label>
+                            <input type="text" id="meta-headmaster-role" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="Kepala MTsN 4 Kerinci">
+                        </div>
+
+                        <div>
+                            <label for="meta-headmaster" class="block font-semibold text-slate-700 mb-1">Nama Penanda Tangan Utama</label>
+                            <input type="text" id="meta-headmaster" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="Samsir, S.Pd.I">
+                        </div>
+
+                        <div>
+                            <label for="meta-headmaster-nip" class="block font-semibold text-slate-700 mb-1">NIP Penanda Tangan Utama</label>
+                            <input type="text" id="meta-headmaster-nip" oninput="saveMetadata()" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="NIP. 197208151999031004">
+                        </div>
+
+                        <!-- Ketua Panitia Ujian (Kosong Default; Otomatis Tampil di PDF Jika Diisi) -->
+                        <div>
+                            <label for="meta-committee" class="block font-semibold text-slate-700 mb-1">Ketua Panitia Ujian (Opsional)</label>
+                            <input type="text" id="meta-committee" oninput="saveMetadata()" placeholder="Kosongkan jika tidak ditampilkan di PDF" class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="">
+                        </div>
+
+                        <div>
+                            <label for="meta-committee-nip" class="block font-semibold text-slate-700 mb-1">NIP Ketua Panitia Ujian (Opsional)</label>
+                            <input type="text" id="meta-committee-nip" oninput="saveMetadata()" placeholder="Contoh: NIP. 19800101..." class="w-full rounded-xl border border-slate-300 px-3.5 py-2 focus:ring-2 focus:ring-emerald-600 outline-none" value="">
+                        </div>
+
+                        <!-- Ubah PIN Admin -->
+                        <div>
+                            <label for="meta-new-pin" class="block font-semibold text-slate-700 mb-1">Ubah PIN Admin</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="meta-new-pin" maxlength="12" placeholder="PIN Baru" class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                                <button type="button" onclick="updateAdminPin()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-3.5 py-2 rounded-xl text-xs whitespace-nowrap transition">Simpan PIN</button>
+                            </div>
+                        </div>
+
+                        <!-- Unggah Logo Kemenag Kustom / Reset Vektor Default -->
+                        <div class="md:col-span-2 lg:col-span-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0 kemenag-logo-slot"></div>
+                                <div>
+                                    <div class="font-bold text-slate-800">Logo Kementerian Agama (Ikhlas Beramal)</div>
+                                    <div class="text-xs text-slate-500">Bawaan menggunakan vektor resmi Kemenag. Anda juga dapat mengunggah gambar PNG/JPG kustom.</div>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <label class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3.5 py-2 rounded-xl transition">
+                                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                    <span>Unggah Logo Kustom</span>
+                                    <input type="file" accept="image/*" onchange="handleCustomLogoUpload(event)" class="hidden">
+                                </label>
+                                <button type="button" onclick="resetDefaultLogo()" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition">
+                                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                    <span>Reset Logo Vektor</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Filter, Pencarian & Alat Backup/Restore Data -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                            <i data-lucide="filter" class="w-4 h-4 text-emerald-700"></i>
+                            <span>Filter, Pencarian &amp; Kelola Data Pengawas</span>
+                        </h3>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="exportBackupJSON()" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                <span>Backup JSON</span>
+                            </button>
+                            <label class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl transition">
+                                <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                                <span>Restore JSON</span>
+                                <input type="file" accept=".json,application/json" onchange="importBackupJSON(event)" class="hidden">
+                            </label>
+                            <button type="button" onclick="clearAllAttendanceData()" class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-3 py-2 rounded-xl transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                <span>Hapus Semua Data</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-sm">
+                        <div>
+                            <label for="filter-date" class="block text-xs font-bold text-slate-600 mb-1">Filter Hari / Tanggal</label>
+                            <select id="filter-date" onchange="applyFiltersAndRender()" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-600 outline-none">
+                                <option value="">Semua Tanggal</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-room" class="block text-xs font-bold text-slate-600 mb-1">Filter Ruang</label>
+                            <select id="filter-room" onchange="applyFiltersAndRender()" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-600 outline-none">
+                                <option value="">Semua Ruang</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-session" class="block text-xs font-bold text-slate-600 mb-1">Filter Sesi</label>
+                            <select id="filter-session" onchange="applyFiltersAndRender()" class="w-full rounded-xl border border-slate-300 px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-600 outline-none">
+                                <option value="">Semua Sesi</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filter-search" class="block text-xs font-bold text-slate-600 mb-1">Cari Nama / NIP / Mapel</label>
+                            <input type="text" id="filter-search" oninput="applyFiltersAndRender()" placeholder="Ketik kata kunci..." class="w-full rounded-xl border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-emerald-600 outline-none">
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" onclick="resetAdminFilters()" class="w-full py-2 px-3 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition">
+                                Reset Filter
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabel Data Admin -->
+                    <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-3 w-12 text-center">No</th>
+                                    <th class="py-3 px-3">Nama &amp; NIP</th>
+                                    <th class="py-3 px-3">Ruang &amp; Sesi</th>
+                                    <th class="py-3 px-3">Mapel</th>
+                                    <th class="py-3 px-3">Hari/Tanggal &amp; Jam</th>
+                                    <th class="py-3 px-3 text-center">TTD</th>
+                                    <th class="py-3 px-3 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-table-body" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================================================================== -->
+        <!-- TAB 3: PRATINJAU & CETAK PDF RESMI A4                                 -->
+        <!-- ===================================================================== -->
+        <section id="tab-preview" class="hidden space-y-5">
+            <!-- Toolbar Aksi Cetak / Simpan PDF -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print">
+                <div>
+                    <h2 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                        <i data-lucide="file-check-2" class="w-5 h-5 text-emerald-700"></i>
+                        <span>Pratinjau Dokumen Resmi A4 (<span id="preview-count-label">0</span> Pengawas)</span>
+                    </h2>
+                    <p class="text-xs text-slate-500">Menampilkan data sesuai filter aktif di Panel Admin. Otomatis terbagi rapi lintas halaman A4.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-white bg-emerald-700 hover:bg-emerald-800 px-4 py-2.5 rounded-xl shadow-md transition">
+                        <i data-lucide="printer" class="w-4 h-4"></i>
+                        <span>Cetak / Simpan PDF (A4)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lembar Kertas A4 -->
+            <div class="a4-sheet text-slate-900">
+                <!-- Kop Surat Resmi Madrasah -->
+                <div class="kop-border-double flex items-center gap-4 pb-3 border-b-4 border-double border-slate-900">
+                    <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0 kemenag-logo-slot"></div>
+                    <div class="flex-1 text-center kop-serif">
+                        <div class="text-xs sm:text-sm font-bold tracking-wider uppercase text-slate-900">
+                            Kementerian Agama Republik Indonesia
+                        </div>
+                        <div class="text-sm sm:text-base font-bold tracking-wide uppercase text-slate-900">
+                            Kantor Kementerian Agama Kabupaten Kerinci
+                        </div>
+                        <div class="text-lg sm:text-2xl font-bold tracking-wide uppercase text-slate-950 leading-tight mt-0.5">
+                            MTsN 4 KERINCI
+                        </div>
+                        <div class="text-[11px] sm:text-xs text-slate-800 mt-0.5" id="doc-address">
+                            Jln. Bukit Siru Seleman, Kecamatan Danau Kerinci, Kabupaten Kerinci
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Judul Dokumen -->
+                <div class="text-center mt-4 mb-3">
+                    <h3 class="text-sm sm:text-base font-extrabold uppercase tracking-wide underline underline-offset-4">
+                        DAFTAR HADIR PENGAWAS UJIAN
+                    </h3>
+                    <p class="text-xs sm:text-sm font-semibold text-slate-800 mt-1" id="doc-exam-title">
+                        Asesmen Sumatif Akhir Semester (ASAS) Tahun Pelajaran 2026/2027
+                    </p>
+                    <p class="text-xs text-slate-700">
+                        Tahun Pelajaran: <strong id="doc-academic-year">2026/2027</strong>
+                    </p>
+                </div>
+
+                <!-- Strip Referensi Waktu Ujian Per Sesi & Filter Aktif -->
+                <div class="mb-3 px-2.5 py-2 border border-slate-300 bg-slate-50 text-[10px] sm:text-[11px] flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="font-bold text-slate-900">Waktu Ujian Per Sesi:</span>
+                        <span><strong>SESI PERTAMA</strong> 08.00 – 09.00</span>
+                        <span>•</span>
+                        <span><strong>SESI KEDUA</strong> 09.00 – 10.00</span>
+                        <span>•</span>
+                        <span><strong>SESI KETIGA</strong> 10.15 – 11.15</span>
+                    </div>
+                    <div class="text-slate-700" id="doc-filter-summary">Filter: Semua Data</div>
+                </div>
+
+                <!-- Tabel Daftar Hadir Pengawas -->
+                <div class="overflow-x-auto">
+                    <table class="doc-table text-[11px] sm:text-xs">
+                        <thead>
+                            <tr>
+                                <th class="w-9">No</th>
+                                <th class="text-left">Nama Pengawas &amp; NIP</th>
+                                <th class="w-20">Ruang</th>
+                                <th>Mata Pelajaran</th>
+                                <th class="w-36">Hari/Tanggal &amp; Jam Hadir</th>
+                                <th class="w-32">Sesi &amp; Waktu Ujian</th>
+                                <th class="w-28">Tanda Tangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doc-table-body">
+                            <tr>
+                                <td colspan="7" class="text-center py-6 text-slate-500">
+                                    Belum ada data kehadiran pengawas untuk ditampilkan.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Blok Pengesahan Penanda Tangan & Ketua Panitia Ujian -->
+                <div id="doc-signature-section" class="sig-block mt-8 flex justify-end"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Aplikasi -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 text-center text-xs text-slate-500 no-print">
+        Sistem Daftar Hadir Pengawas Ujian • MTsN 4 Kerinci • Jln. Bukit Siru Seleman, Kecamatan Danau Kerinci, Kabupaten Kerinci
+    </footer>
+
+    <script>
+        // =====================================================================
+        // KONSTANTA & KUNCI PENYIMPANAN LOKAL (LOCALSTORAGE)
+        // =====================================================================
+        const STORAGE_KEY_RECORDS = 'mtsn4kerinci_proctor_records_v1';
+        const STORAGE_KEY_META = 'mtsn4kerinci_proctor_meta_v1';
+        const STORAGE_KEY_PIN = 'mtsn4kerinci_admin_pin_v1';
+        const STORAGE_KEY_LOGO = 'mtsn4kerinci_custom_logo_v1';
+
+        const DEFAULT_ADMIN_PIN = '1234';
+
+        // Vektor SVG Resmi Kemenag "Ikhlas Beramal" (Perisai Hijau Berbingkai Emas,
+        // Bintang, Al-Qur'an Terbuka di Atas Rehal Hitam Tanpa Globe, Padi & Kapas, Pita "IKHLAS BERAMAL")
+        const DEFAULT_KEMENAG_SVG = `
+            <svg viewBox="0 0 220 240" class="w-full h-full object-contain" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo Kementerian Agama Ikhlas Beramal">
+                <!-- Perisai Segilima Emas -->
+                <polygon points="110,6 212,76 174,230 46,230 8,76" fill="#eab308" stroke="#ca8a04" stroke-width="3"/>
+                <!-- Perisai Segilima Hijau -->
+                <polygon points="110,16 200,80 166,220 54,220 20,80" fill="#0b6b3a"/>
+
+                <!-- Bintang Emas di Atas -->
+                <polygon points="110,27 115.5,39.5 129,40.8 118.8,49.6 121.9,63 110,55.9 98.1,63 101.2,49.6 91,40.8 104.5,39.5" fill="#facc15" stroke="#b45309" stroke-width="1"/>
+
+                <!-- Tangkai Kapas Kiri (Putih dengan Kelopak Hijau) -->
+                <path d="M 88,184 C 54,158 50,104 82,62" fill="none" stroke="#86efac" stroke-width="4" stroke-linecap="round"/>
+                <g fill="#f8fafc" stroke="#1e293b" stroke-width="1.2">
+                    <circle cx="80" cy="67" r="6"/>
+                    <circle cx="67" cy="82" r="6.5"/>
+                    <circle cx="59" cy="103" r="7"/>
+                    <circle cx="57" cy="126" r="7"/>
+                    <circle cx="63" cy="148" r="6.5"/>
+                    <circle cx="74" cy="166" r="6"/>
+                </g>
+                <g fill="#15803d">
+                    <ellipse cx="87" cy="72" rx="6" ry="3" transform="rotate(-25 87 72)"/>
+                    <ellipse cx="75" cy="88" rx="6.5" ry="3" transform="rotate(-35 75 88)"/>
+                    <ellipse cx="68" cy="110" rx="7" ry="3" transform="rotate(-45 68 110)"/>
+                    <ellipse cx="67" cy="133" rx="7" ry="3" transform="rotate(-55 67 133)"/>
+                    <ellipse cx="73" cy="154" rx="6.5" ry="3" transform="rotate(-40 73 154)"/>
+                </g>
+
+                <!-- Tangkai Padi Kanan (Emas) -->
+                <path d="M 132,184 C 166,158 170,104 138,62" fill="none" stroke="#fde047" stroke-width="4" stroke-linecap="round"/>
+                <g fill="#facc15" stroke="#a16207" stroke-width="0.9">
+                    <ellipse cx="141" cy="67" rx="5.5" ry="2.6" transform="rotate(30 141 67)"/>
+                    <ellipse cx="133" cy="74" rx="5.5" ry="2.6" transform="rotate(-20 133 74)"/>
+                    <ellipse cx="152" cy="82" rx="6" ry="2.8" transform="rotate(35 152 82)"/>
+                    <ellipse cx="144" cy="90" rx="6" ry="2.8" transform="rotate(-15 144 90)"/>
+                    <ellipse cx="160" cy="102" rx="6.5" ry="3" transform="rotate(40 160 102)"/>
+                    <ellipse cx="151" cy="110" rx="6.5" ry="3" transform="rotate(-10 151 110)"/>
+                    <ellipse cx="163" cy="124" rx="6.5" ry="3" transform="rotate(45 163 124)"/>
+                    <ellipse cx="153" cy="132" rx="6.5" ry="3" transform="rotate(-5 153 132)"/>
+                    <ellipse cx="158" cy="147" rx="6" ry="2.8" transform="rotate(38 158 147)"/>
+                    <ellipse cx="149" cy="155" rx="6" ry="2.8" transform="rotate(-12 149 155)"/>
+                    <ellipse cx="148" cy="168" rx="5.5" ry="2.6" transform="rotate(28 148 168)"/>
+                </g>
+
+                <!-- Rehal Hitam Menyilang di Bawah Kitab -->
+                <polygon points="82,158 138,134 142,141 86,165" fill="#0f172a" stroke="#f8fafc" stroke-width="1"/>
+                <polygon points="138,158 82,134 78,141 134,165" fill="#0f172a" stroke="#f8fafc" stroke-width="1"/>
+
+                <!-- Kitab Suci Al-Qur'an Terbuka Berwarna Emas -->
+                <path d="M 110,92 C 96,86 82,86 72,90 L 72,134 C 82,130 96,130 110,136 C 124,130 138,130 148,134 L 148,90 C 138,86 124,86 110,92 Z" fill="#facc15" stroke="#78350f" stroke-width="2"/>
+                <line x1="110" y1="92" x2="110" y2="136" stroke="#78350f" stroke-width="2"/>
+                <line x1="80" y1="100" x2="103" y2="103" stroke="#92400e" stroke-width="1.3"/>
+                <line x1="80" y1="108" x2="103" y2="111" stroke="#92400e" stroke-width="1.3"/>
+                <line x1="80" y1="116" x2="103" y2="119" stroke="#92400e" stroke-width="1.3"/>
+                <line x1="117" y1="103" x2="140" y2="100" stroke="#92400e" stroke-width="1.3"/>
+                <line x1="117" y1="111" x2="140" y2="108" stroke="#92400e" stroke-width="1.3"/>
+                <line x1="117" y1="119" x2="140" y2="116" stroke="#92400e" stroke-width="1.3"/>
+
+                <!-- Pita Putih Melengkung "IKHLAS BERAMAL" -->
+                <path d="M 34,186 Q 110,214 186,186 L 178,207 Q 110,231 42,207 Z" fill="#ffffff" stroke="#0f172a" stroke-width="1.8"/>
+                <text x="110" y="206" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="14.5" letter-spacing="0.6" fill="#0f172a">
+                    IKHLAS BERAMAL
+                </text>
+            </svg>
+        `;
+
+        // =====================================================================
+        // STATE APLIKASI
+        // =====================================================================
+        let attendanceList = [];
+        let filteredList = [];
+        let isAdminUnlocked = false;
+        let pendingConfirmAction = null;
+
+        // State Kanvas Tanda Tangan & Riwayat Goresan (Undo)
+        let canvas, ctx;
+        let isDrawing = false;
+        let hasSigned = false;
+        let signatureStrokes = []; // Array of stroke arrays: [[{x, y}, ...], ...]
+        let currentStroke = [];
+
+        // =====================================================================
+        // INISIALISASI APLIKASI
+        // =====================================================================
+        window.addEventListener('DOMContentLoaded', () => {
+            initSignatureCanvas();
+            loadCustomLogoOrDefault();
+            loadAttendanceFromStorage();
+            loadMetadata();
+            initDefaultDateAndTime();
+            syncSessionTimePreview();
+            applyFiltersAndRender();
+            lucide.createIcons();
+        });
+
+        window.addEventListener('resize', () => {
+            resizeSignatureCanvas(true);
+        });
+
+        // =====================================================================
+        // UTILITAS UI: TOAST, MODAL KONFIRMASI, ESCAPE HTML & LOGO KEMENAG
+        // =====================================================================
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colorClass = type === 'error'
+                ? 'bg-rose-700 text-white border-rose-800'
+                : type === 'warning'
+                    ? 'bg-amber-500 text-slate-950 border-amber-600'
+                    : 'bg-emerald-800 text-white border-emerald-900';
+
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl shadow-lg border text-xs sm:text-sm font-bold flex items-center justify-between gap-3 transition-all ${colorClass}`;
+            toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 250);
+            }, 3200);
+        }
+
+        function openConfirmModal(title, message, onConfirm) {
+            pendingConfirmAction = onConfirm;
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+            pendingConfirmAction = null;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+
+        document.getElementById('confirm-ok-btn').addEventListener('click', () => {
+            const action = pendingConfirmAction;
+            pendingConfirmAction = null;
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            if (typeof action === 'function') action();
+        });
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderLogosInDOM(customDataUrl) {
+            const slots = document.querySelectorAll('.kemenag-logo-slot');
+            slots.forEach(slot => {
+                if (customDataUrl) {
+                    slot.innerHTML = `<img src="${customDataUrl}" alt="Logo Kementerian Agama" class="w-full h-full object-contain">`;
+                } else {
+                    slot.innerHTML = DEFAULT_KEMENAG_SVG;
+                }
+            });
+        }
+
+        function loadCustomLogoOrDefault() {
+            try {
+                const savedLogo = localStorage.getItem(STORAGE_KEY_LOGO);
+                renderLogosInDOM(savedLogo || null);
+            } catch (e) {
+                renderLogosInDOM(null);
+            }
+        }
+
+        function handleCustomLogoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/')) {
+                showToast('Pilih file gambar (PNG/JPG/SVG).', 'error');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    localStorage.setItem(STORAGE_KEY_LOGO, reader.result);
+                    renderLogosInDOM(reader.result);
+                    showToast('Logo Kemenag kustom berhasil diterapkan.');
+                } catch (err) {
+                    showToast('Ukuran gambar terlalu besar untuk penyimpanan lokal.', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function resetDefaultLogo() {
+            localStorage.removeItem(STORAGE_KEY_LOGO);
+            renderLogosInDOM(null);
+            showToast('Logo dikembalikan ke vektor resmi Kemenag.');
+        }
+
+        // =====================================================================
+        // NAVIGASI 3 TAB
+        // =====================================================================
+        function switchTab(tabName) {
+            const tabs = ['form', 'admin', 'preview'];
+            tabs.forEach(name => {
+                const section = document.getElementById(`tab-${name}`);
+                const navBtn = document.getElementById(`nav-${name}`);
+                if (name === tabName) {
+                    section.classList.remove('hidden');
+                    navBtn.className = 'tab-btn flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition bg-white text-emerald-950 shadow';
+                } else {
+                    section.classList.add('hidden');
+                    navBtn.className = 'tab-btn flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-bold transition text-emerald-100 hover:bg-emerald-900/70';
+                }
+            });
+
+            if (tabName === 'form') {
+                setTimeout(() => resizeSignatureCanvas(true), 50);
+            }
+            if (tabName === 'admin') {
+                updateAdminLockView();
+                applyFiltersAndRender();
+            }
+            if (tabName === 'preview') {
+                renderPreviewDocument();
+            }
+            lucide.createIcons();
+        }
+
+        // =====================================================================
+        // FORM PENGAWAS: TANGGAL INDONESIA, JAM HADIR & KANVAS TANDA TANGAN
+        // =====================================================================
+        function initDefaultDateAndTime() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const dateInput = document.getElementById('input-date-picker');
+            if (!dateInput.value) {
+                dateInput.value = `${yyyy}-${mm}-${dd}`;
+            }
+            syncIndonesianDate();
+            setCurrentArrivalTime();
+        }
+
+        function formatIndonesianDateFromISO(isoStr) {
+            if (!isoStr) return '';
+            const parts = isoStr.split('-');
+            if (parts.length !== 3) return isoStr;
+            const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+            if (isNaN(dateObj.getTime())) return isoStr;
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = [
+                'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+            ];
+            return `${days[dateObj.getDay()]}, ${dateObj.getDate()} ${months[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+        }
+
+        function syncIndonesianDate() {
+            const iso = document.getElementById('input-date-picker').value;
+            const label = formatIndonesianDateFromISO(iso);
+            document.getElementById('formatted-date-preview').textContent = label ? `Terformat: ${label}` : '';
+        }
+
+        function setCurrentArrivalTime() {
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('input-arrival-time').value = `${hh}:${mm}`;
+        }
+
+        const SESSION_SCHEDULE_MAP = {
+            'SESI PERTAMA (08.00 – 09.00)': { label: 'SESI PERTAMA', range: '08.00 – 09.00' },
+            'SESI KEDUA (09.00 – 10.00)': { label: 'SESI KEDUA', range: '09.00 – 10.00' },
+            'SESI KETIGA (10.15 – 11.15)': { label: 'SESI KETIGA', range: '10.15 – 11.15' }
+        };
+
+        function getSessionDetails(sessionStr) {
+            if (SESSION_SCHEDULE_MAP[sessionStr]) {
+                return SESSION_SCHEDULE_MAP[sessionStr];
+            }
+            const upper = String(sessionStr || '').toUpperCase();
+            if (upper.includes('PERTAMA') || upper.includes('08.00')) {
+                return SESSION_SCHEDULE_MAP['SESI PERTAMA (08.00 – 09.00)'];
+            }
+            if (upper.includes('KEDUA') || upper.includes('09.00')) {
+                return SESSION_SCHEDULE_MAP['SESI KEDUA (09.00 – 10.00)'];
+            }
+            if (upper.includes('KETIGA') || upper.includes('10.15')) {
+                return SESSION_SCHEDULE_MAP['SESI KETIGA (10.15 – 11.15)'];
+            }
+            return { label: sessionStr || '-', range: '' };
+        }
+
+        function syncSessionTimePreview() {
+            const sessionVal = document.getElementById('input-session').value;
+            const info = getSessionDetails(sessionVal);
+            const previewEl = document.getElementById('session-time-preview');
+            if (previewEl) {
+                previewEl.textContent = info.range
+                    ? `Waktu Ujian: ${info.range} WIB`
+                    : `Sesi: ${info.label}`;
+            }
+        }
+
+        function handleRoomSelectChange() {
+            const select = document.getElementById('select-room');
+            const manualInput = document.getElementById('input-room-manual');
+            if (select.value === '__MANUAL__') {
+                manualInput.classList.remove('hidden');
+                manualInput.focus();
+            } else {
+                manualInput.classList.add('hidden');
+                manualInput.value = '';
+            }
+        }
+
+        function initSignatureCanvas() {
+            canvas = document.getElementById('signature-canvas');
+            ctx = canvas.getContext('2d');
+            resizeSignatureCanvas(false);
+
+            canvas.addEventListener('pointerdown', startPointerDraw);
+            canvas.addEventListener('pointermove', movePointerDraw);
+            canvas.addEventListener('pointerup', endPointerDraw);
+            canvas.addEventListener('pointercancel', endPointerDraw);
+            canvas.addEventListener('pointerleave', endPointerDraw);
+        }
+
+        function resizeSignatureCanvas(preserveStrokes) {
+            if (!canvas || !ctx) return;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            const oldWidth = canvas.width / ratio || rect.width;
+            const oldHeight = canvas.height / ratio || rect.height;
+
+            canvas.width = Math.floor(rect.width * ratio);
+            canvas.height = Math.floor(rect.height * ratio);
+
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(ratio, ratio);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.6;
+
+            if (preserveStrokes && signatureStrokes.length > 0 && oldWidth > 0 && oldHeight > 0) {
+                const scaleX = rect.width / oldWidth;
+                const scaleY = rect.height / oldHeight;
+                signatureStrokes = signatureStrokes.map(stroke =>
+                    stroke.map(pt => ({ x: pt.x * scaleX, y: pt.y * scaleY }))
+                );
+                redrawSignatureFromStrokes();
+            } else if (!preserveStrokes) {
+                redrawSignatureFromStrokes();
+            }
+        }
+
+        function getCanvasCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function startPointerDraw(e) {
+            e.preventDefault();
+            canvas.setPointerCapture(e.pointerId);
+            isDrawing = true;
+            const pt = getCanvasCoords(e);
+            currentStroke = [pt];
+        }
+
+        function movePointerDraw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pt = getCanvasCoords(e);
+            const prevPt = currentStroke[currentStroke.length - 1];
+            currentStroke.push(pt);
+
+            ctx.beginPath();
+            ctx.moveTo(prevPt.x, prevPt.y);
+            ctx.lineTo(pt.x, pt.y);
+            ctx.stroke();
+            hasSigned = true;
+        }
+
+        function endPointerDraw(e) {
+            if (!isDrawing) return;
+            isDrawing = false;
+            if (currentStroke.length > 0) {
+                signatureStrokes.push(currentStroke);
+                hasSigned = true;
+            }
+            currentStroke = [];
+        }
+
+        function redrawSignatureFromStrokes() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            ctx.clearRect(0, 0, rect.width, rect.height);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 2.6;
+
+            signatureStrokes.forEach(stroke => {
+                if (stroke.length === 0) return;
+                ctx.beginPath();
+                if (stroke.length === 1) {
+                    ctx.arc(stroke[0].x, stroke[0].y, 1.3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fill();
+                } else {
+                    ctx.moveTo(stroke[0].x, stroke[0].y);
+                    for (let i = 1; i < stroke.length; i++) {
+                        ctx.lineTo(stroke[i].x, stroke[i].y);
+                    }
+                    ctx.stroke();
+                }
+            });
+
+            hasSigned = signatureStrokes.length > 0;
+        }
+
+        function undoSignatureStroke() {
+            if (signatureStrokes.length === 0) {
+                showToast('Tidak ada goresan untuk di-undo.', 'warning');
+                return;
+            }
+            signatureStrokes.pop();
+            redrawSignatureFromStrokes();
+            showToast('Goresan terakhir dibatalkan.');
+        }
+
+        function clearSignatureCanvas() {
+            signatureStrokes = [];
+            currentStroke = [];
+            hasSigned = false;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            ctx.clearRect(0, 0, rect.width, rect.height);
+        }
+
+        function exportSignatureDataURL() {
+            // Ekspor tanda tangan dengan latar transparan terpotong rapi di sekitar goresan
+            if (!hasSigned || signatureStrokes.length === 0) return '';
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            signatureStrokes.forEach(stroke => {
+                stroke.forEach(pt => {
+                    if (pt.x < minX) minX = pt.x;
+                    if (pt.y < minY) minY = pt.y;
+                    if (pt.x > maxX) maxX = pt.x;
+                    if (pt.y > maxY) maxY = pt.y;
+                });
+            });
+            const pad = 10;
+            minX = Math.max(0, minX - pad);
+            minY = Math.max(0, minY - pad);
+            const w = Math.max(40, maxX - minX + pad * 2);
+            const h = Math.max(30, maxY - minY + pad * 2);
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.ceil(w * 2);
+            tempCanvas.height = Math.ceil(h * 2);
+            const tctx = tempCanvas.getContext('2d');
+            tctx.scale(2, 2);
+            tctx.lineCap = 'round';
+            tctx.lineJoin = 'round';
+            tctx.strokeStyle = '#0f172a';
+            tctx.lineWidth = 2.4;
+
+            signatureStrokes.forEach(stroke => {
+                if (stroke.length === 0) return;
+                tctx.beginPath();
+                if (stroke.length === 1) {
+                    tctx.arc(stroke[0].x - minX, stroke[0].y - minY, 1.3, 0, Math.PI * 2);
+                    tctx.fillStyle = '#0f172a';
+                    tctx.fill();
+                } else {
+                    tctx.moveTo(stroke[0].x - minX, stroke[0].y - minY);
+                    for (let i = 1; i < stroke.length; i++) {
+                        tctx.lineTo(stroke[i].x - minX, stroke[i].y - minY);
+                    }
+                    tctx.stroke();
+                }
+            });
+
+            return tempCanvas.toDataURL('image/png');
+        }
+
+        // =====================================================================
+        // SIMPAN DATA KEHADIRAN PENGAWAS & PENYIMPANAN LOCALSTORAGE
+        // =====================================================================
+        function handleSaveProctor(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('input-name').value.trim();
+            const nip = document.getElementById('input-nip').value.trim() || '-';
+            const roomSelect = document.getElementById('select-room').value;
+            const roomManual = document.getElementById('input-room-manual').value.trim();
+            const room = roomSelect === '__MANUAL__' ? roomManual : roomSelect;
+            const subject = document.getElementById('input-subject').value.trim();
+            const dateISO = document.getElementById('input-date-picker').value;
+            const dateLabel = formatIndonesianDateFromISO(dateISO) || dateISO;
+            const session = document.getElementById('input-session').value;
+            const arrivalTime = document.getElementById('input-arrival-time').value;
+            const notes = document.getElementById('input-notes').value.trim();
+
+            if (!name || !room || !subject || !dateLabel) {
+                showToast('Lengkapi semua kolom wajib bertanda bintang (*).', 'error');
+                return;
+            }
+
+            if (!hasSigned || signatureStrokes.length === 0) {
+                showToast('Silakan bubuhkan tanda tangan terlebih dahulu.', 'error');
+                return;
+            }
+
+            const signatureDataUrl = exportSignatureDataURL();
+
+            const entry = {
+                id: 'rec_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                name,
+                nip,
+                room,
+                subject,
+                dateISO,
+                dateLabel,
+                session,
+                arrivalTime,
+                notes,
+                signature: signatureDataUrl,
+                createdAt: new Date().toISOString()
+            };
+
+            attendanceList.push(entry);
+            saveAttendanceToStorage();
+
+            // Reset identitas & tanda tangan agar siap dipakai pengawas berikutnya
+            document.getElementById('input-name').value = '';
+            document.getElementById('input-nip').value = '';
+            document.getElementById('input-notes').value = '';
+            clearSignatureCanvas();
+            setCurrentArrivalTime();
+            document.getElementById('input-name').focus();
+
+            applyFiltersAndRender();
+            showToast(`Kehadiran "${name}" berhasil disimpan!`);
+        }
+
+        function saveAttendanceToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEY_RECORDS, JSON.stringify(attendanceList));
+            } catch (e) {
+                showToast('Penyimpanan penuh. Lakukan Backup JSON lalu bersihkan data lama.', 'warning');
+            }
+        }
+
+        function loadAttendanceFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_RECORDS);
+                attendanceList = raw ? JSON.parse(raw) : [];
+                if (!Array.isArray(attendanceList)) attendanceList = [];
+            } catch (e) {
+                attendanceList = [];
+            }
+        }
+
+        // =====================================================================
+        // PANEL ADMIN: PIN, FILTER, EDIT, HAPUS, 20 DATA DEMO & BACKUP/RESTORE
+        // =====================================================================
+        function getAdminPin() {
+            return localStorage.getItem(STORAGE_KEY_PIN) || DEFAULT_ADMIN_PIN;
+        }
+
+        function updateAdminPin() {
+            const newPinInput = document.getElementById('meta-new-pin');
+            const newPin = newPinInput.value.trim();
+            if (newPin.length < 4) {
+                showToast('PIN Admin minimal 4 karakter.', 'error');
+                return;
+            }
+            localStorage.setItem(STORAGE_KEY_PIN, newPin);
+            newPinInput.value = '';
+            showToast('PIN Admin berhasil diperbarui.');
+        }
+
+        function handleAdminUnlock(event) {
+            event.preventDefault();
+            const pinInput = document.getElementById('admin-pin-input');
+            if (pinInput.value === getAdminPin()) {
+                isAdminUnlocked = true;
+                pinInput.value = '';
+                updateAdminLockView();
+                applyFiltersAndRender();
+                showToast('Selamat datang di Panel Admin.');
+            } else {
+                showToast('PIN Admin salah. Coba lagi.', 'error');
+                pinInput.select();
+            }
+        }
+
+        function lockAdminPanel() {
+            isAdminUnlocked = false;
+            updateAdminLockView();
+            showToast('Panel Admin dikunci.');
+        }
+
+        function updateAdminLockView() {
+            const lockScreen = document.getElementById('admin-lock-screen');
+            const dashboard = document.getElementById('admin-dashboard');
+            if (isAdminUnlocked) {
+                lockScreen.classList.add('hidden');
+                dashboard.classList.remove('hidden');
+            } else {
+                lockScreen.classList.remove('hidden');
+                dashboard.classList.add('hidden');
+            }
+        }
+
+        function populateFilterOptions() {
+            const dateSelect = document.getElementById('filter-date');
+            const roomSelect = document.getElementById('filter-room');
+            const sessionSelect = document.getElementById('filter-session');
+
+            const prevDate = dateSelect.value;
+            const prevRoom = roomSelect.value;
+            const prevSession = sessionSelect.value;
+
+            const dates = [...new Set(attendanceList.map(r => r.dateLabel).filter(Boolean))];
+            const rooms = [...new Set(attendanceList.map(r => r.room).filter(Boolean))].sort();
+            const sessions = [...new Set(attendanceList.map(r => r.session).filter(Boolean))];
+
+            dateSelect.innerHTML = `<option value="">Semua Tanggal</option>` +
+                dates.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
+
+            roomSelect.innerHTML = `<option value="">Semua Ruang</option>` +
+                rooms.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
+
+            sessionSelect.innerHTML = `<option value="">Semua Sesi</option>` +
+                sessions.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+            dateSelect.value = dates.includes(prevDate) ? prevDate : '';
+            roomSelect.value = rooms.includes(prevRoom) ? prevRoom : '';
+            sessionSelect.value = sessions.includes(prevSession) ? prevSession : '';
+        }
+
+        function resetAdminFilters() {
+            document.getElementById('filter-date').value = '';
+            document.getElementById('filter-room').value = '';
+            document.getElementById('filter-session').value = '';
+            document.getElementById('filter-search').value = '';
+            applyFiltersAndRender();
+        }
+
+        function applyFiltersAndRender() {
+            populateFilterOptions();
+
+            const fDate = document.getElementById('filter-date').value;
+            const fRoom = document.getElementById('filter-room').value;
+            const fSession = document.getElementById('filter-session').value;
+            const fSearch = document.getElementById('filter-search').value.trim().toLowerCase();
+
+            filteredList = attendanceList.filter(item => {
+                if (fDate && item.dateLabel !== fDate) return false;
+                if (fRoom && item.room !== fRoom) return false;
+                if (fSession && item.session !== fSession) return false;
+                if (fSearch) {
+                    const hay = `${item.name || ''} ${item.nip || ''} ${item.subject || ''} ${item.room || ''}`.toLowerCase();
+                    if (!hay.includes(fSearch)) return false;
+                }
+                return true;
+            });
+
+            // Perbarui Counter Header, Form & Statistik Admin
+            const total = attendanceList.length;
+            document.getElementById('header-total-count').textContent = total;
+            document.getElementById('form-live-count').textContent = `${total} Orang`;
+            document.getElementById('preview-count-label').textContent = filteredList.length;
+
+            const uniqueRooms = new Set(attendanceList.map(r => (r.room || '').toLowerCase()).filter(Boolean)).size;
+            const uniqueSessions = new Set(attendanceList.map(r => (r.session || '').toLowerCase()).filter(Boolean)).size;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-rooms').textContent = uniqueRooms;
+            document.getElementById('stat-sessions').textContent = uniqueSessions;
+            document.getElementById('stat-filtered').textContent = filteredList.length;
+
+            renderRecentEntriesForm();
+            renderAdminTable();
+            renderPreviewDocument();
+        }
+
+        function renderRecentEntriesForm() {
+            const container = document.getElementById('recent-entries-list');
+            if (attendanceList.length === 0) {
+                container.innerHTML = `<p class="text-slate-400 py-4 text-center text-xs">Belum ada data kehadiran pengawas yang tersimpan.</p>`;
+                return;
+            }
+
+            const recent = [...attendanceList].slice(-5).reverse();
+            container.innerHTML = recent.map(item => `
+                <div class="py-2.5 flex items-center justify-between gap-3">
+                    <div>
+                        <div class="font-bold text-slate-900">${escapeHtml(item.name)} <span class="text-xs font-medium text-slate-500">(${escapeHtml(item.nip)})</span></div>
+                        <div class="text-xs text-slate-600">${escapeHtml(item.room)} • ${escapeHtml(item.subject)} • ${escapeHtml(item.dateLabel)} (${escapeHtml(item.arrivalTime || '-')} WIB)</div>
+                    </div>
+                    ${item.signature ? `<img src="${item.signature}" alt="TTD ${escapeHtml(item.name)}" class="h-9 max-w-[84px] object-contain bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 shrink-0">` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-table-body');
+            if (filteredList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="py-8 text-center text-slate-400">
+                            Tidak ada data pengawas yang cocok dengan filter saat ini.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredList.map((item, idx) => `
+                <tr class="hover:bg-slate-50/80">
+                    <td class="py-2.5 px-3 text-center font-bold text-slate-600">${idx + 1}</td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-bold text-slate-900">${escapeHtml(item.name)}</div>
+                        <div class="text-xs text-slate-500">NIP/NUPTK: ${escapeHtml(item.nip)}</div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-semibold text-emerald-900">${escapeHtml(item.room)}</div>
+                        <div class="text-xs text-slate-500">${escapeHtml(item.session)}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-medium text-slate-800">${escapeHtml(item.subject)}</td>
+                    <td class="py-2.5 px-3">
+                        <div class="text-slate-800">${escapeHtml(item.dateLabel)}</div>
+                        <div class="text-xs text-slate-500">Jam: ${escapeHtml(item.arrivalTime || '-')} WIB</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                        ${item.signature
+                            ? `<img src="${item.signature}" alt="TTD" class="h-9 max-w-[80px] mx-auto object-contain border border-slate-200 rounded bg-white p-0.5">`
+                            : `<span class="text-xs text-slate-400">-</span>`}
+                    </td>
+                    <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                        <button type="button" onclick="openEditModal('${item.id}')" title="Edit" class="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-50 transition">
+                            <i data-lucide="square-pen" class="w-4 h-4 inline"></i>
+                        </button>
+                        <button type="button" onclick="deleteProctorEntry('${item.id}')" title="Hapus" class="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function openEditModal(id) {
+            const item = attendanceList.find(r => r.id === id);
+            if (!item) return;
+
+            document.getElementById('edit-id').value = item.id;
+            document.getElementById('edit-name').value = item.name || '';
+            document.getElementById('edit-nip').value = item.nip || '';
+            document.getElementById('edit-room').value = item.room || '';
+            document.getElementById('edit-subject').value = item.subject || '';
+            document.getElementById('edit-session').value = item.session || '';
+            document.getElementById('edit-date-label').value = item.dateLabel || '';
+            document.getElementById('edit-arrival-time').value = item.arrivalTime || '';
+            document.getElementById('edit-notes').value = item.notes || '';
+
+            const modal = document.getElementById('edit-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEditModal() {
+            const modal = document.getElementById('edit-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveEditedProctor(event) {
+            event.preventDefault();
+            const id = document.getElementById('edit-id').value;
+            const idx = attendanceList.findIndex(r => r.id === id);
+            if (idx === -1) return;
+
+            attendanceList[idx] = {
+                ...attendanceList[idx],
+                name: document.getElementById('edit-name').value.trim(),
+                nip: document.getElementById('edit-nip').value.trim() || '-',
+                room: document.getElementById('edit-room').value.trim(),
+                subject: document.getElementById('edit-subject').value.trim(),
+                session: document.getElementById('edit-session').value.trim(),
+                dateLabel: document.getElementById('edit-date-label').value.trim(),
+                arrivalTime: document.getElementById('edit-arrival-time').value,
+                notes: document.getElementById('edit-notes').value.trim()
+            };
+
+            saveAttendanceToStorage();
+            closeEditModal();
+            applyFiltersAndRender();
+            showToast('Data pengawas berhasil diperbarui.');
+        }
+
+        function deleteProctorEntry(id) {
+            const item = attendanceList.find(r => r.id === id);
+            if (!item) return;
+            openConfirmModal(
+                'Hapus Data Pengawas',
+                `Yakin ingin menghapus kehadiran atas nama "${item.name}"?`,
+                () => {
+                    attendanceList = attendanceList.filter(r => r.id !== id);
+                    saveAttendanceToStorage();
+                    applyFiltersAndRender();
+                    showToast('Data pengawas dihapus.');
+                }
+            );
+        }
+
+        function clearAllAttendanceData() {
+            if (attendanceList.length === 0) {
+                showToast('Data kehadiran memang sudah kosong.', 'warning');
+                return;
+            }
+            openConfirmModal(
+                'Hapus Semua Data Kehadiran',
+                `Tindakan ini akan menghapus seluruh ${attendanceList.length} data kehadiran pengawas secara permanen. Lanjutkan?`,
+                () => {
+                    attendanceList = [];
+                    saveAttendanceToStorage();
+                    applyFiltersAndRender();
+                    showToast('Seluruh data kehadiran berhasil dihapus.');
+                }
+            );
+        }
+
+        // Generator 20 Data Demo dengan Tanda Tangan Berbeda untuk Uji Daftar Panjang & Multi-Halaman A4
+        function generateTwentyDemoData() {
+            const sampleProctors = [
+                { name: 'Hj. Nuraini, S.Pd', nip: '197805122005012003', subject: 'Bahasa Indonesia', time: '07.10' },
+                { name: 'H. Muhammad Ali, S.Ag', nip: '197503102003121002', subject: 'Al-Qur’an Hadis', time: '07.12' },
+                { name: 'Yuliana, S.Pd', nip: '198409212009012006', subject: 'Matematika', time: '07.15' },
+                { name: 'Darmawan, S.Pd.I', nip: '198111042007011004', subject: 'Fiqih', time: '07.14' },
+                { name: 'Rina Marlina, S.Si', nip: '198702182011012008', subject: 'Ilmu Pengetahuan Alam', time: '07.18' },
+                { name: 'Zulkifli, S.Pd', nip: '197906252006041005', subject: 'Bahasa Inggris', time: '07.16' },
+                { name: 'Fitri Handayani, S.Pd', nip: '199004122014032002', subject: 'IPS Terpadu', time: '07.20' },
+                { name: 'Mardiansyah, S.Kom', nip: '198608092010011009', subject: 'Informatika', time: '07.19' },
+                { name: 'Neliwati, S.Ag', nip: '197612302002122001', subject: 'Akidah Akhlak', time: '07.21' },
+                { name: 'Hendri Saputra, S.Pd', nip: '198903152015031003', subject: 'PJOK', time: '07.22' },
+                { name: 'Siti Rahmah, S.Pd.I', nip: '199207282019032007', subject: 'SKI', time: '07.23' },
+                { name: 'Budi Santoso, S.Pd', nip: '198301192008011006', subject: 'PPKn', time: '07.24' },
+                { name: 'Desi Ratnasari, S.Pd', nip: '199110052018012004', subject: 'Bahasa Arab', time: '09.40' },
+                { name: 'Irwansyah, S.Pd', nip: '198005022005011011', subject: 'Bahasa Indonesia', time: '09.42' },
+                { name: 'Wahyuni, S.Si', nip: '198812172012122005', subject: 'Matematika', time: '09.44' },
+                { name: 'Fauzan Azima, S.Pd.I', nip: '199306112020121002', subject: 'Al-Qur’an Hadis', time: '09.45' },
+                { name: 'Leni Marlina, S.Pd', nip: '198509032010012012', subject: 'Bahasa Inggris', time: '09.46' },
+                { name: 'Rudi Hartono, S.Pd', nip: '197711272004121003', subject: 'Ilmu Pengetahuan Alam', time: '09.48' },
+                { name: 'Novita Sari, S.Pd', nip: '199402222022032001', subject: 'IPS Terpadu', time: '09.49' },
+                { name: 'Abdul Hamid, S.Ag', nip: '197408142000031001', subject: 'Fiqih', time: '09.50' }
+            ];
+
+            const dateISO = document.getElementById('input-date-picker').value || '2026-11-27';
+            const dateLabel = formatIndonesianDateFromISO(dateISO) || 'Jumat, 27 November 2026';
+
+            const generated = sampleProctors.map((p, i) => {
+                const roomNum = String((i % 12) + 1).padStart(2, '0');
+                let session = 'SESI PERTAMA (08.00 – 09.00)';
+                let arrivalTime = '07.45';
+                if (i >= 7 && i < 14) {
+                    session = 'SESI KEDUA (09.00 – 10.00)';
+                    arrivalTime = '08.48';
+                } else if (i >= 14) {
+                    session = 'SESI KETIGA (10.15 – 11.15)';
+                    arrivalTime = '10.02';
+                }
+                return {
+                    id: 'demo_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6),
+                    name: p.name,
+                    nip: p.nip,
+                    room: `Ruang ${roomNum}`,
+                    subject: p.subject,
+                    dateISO,
+                    dateLabel,
+                    session,
+                    arrivalTime,
+                    notes: 'Hadir tepat waktu',
+                    signature: createSampleSignatureImage(i),
+                    createdAt: new Date().toISOString()
+                };
+            });
+
+            attendanceList = attendanceList.concat(generated);
+            saveAttendanceToStorage();
+            applyFiltersAndRender();
+            showToast('20 Data Demo pengawas berhasil ditambahkan.');
+        }
+
+        function createSampleSignatureImage(seedIndex) {
+            const c = document.createElement('canvas');
+            c.width = 220;
+            c.height = 90;
+            const g = c.getContext('2d');
+            g.strokeStyle = '#0f172a';
+            g.lineWidth = 2.4;
+            g.lineCap = 'round';
+            g.lineJoin = 'round';
+
+            const offset = (seedIndex % 5) * 8;
+            g.beginPath();
+            g.moveTo(22 + offset, 56);
+            g.bezierCurveTo(45 + offset, 15, 70, 75, 95, 38);
+            g.bezierCurveTo(115, 12, 130, 68, 162, 42);
+            if (seedIndex % 2 === 0) {
+                g.moveTo(40, 64);
+                g.lineTo(150, 58);
+            }
+            g.stroke();
+            return c.toDataURL('image/png');
+        }
+
+        function exportBackupJSON() {
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                school: 'MTsN 4 Kerinci',
+                records: attendanceList,
+                metadata: getCurrentMetadataFromInputs()
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `absen-pengawas-mtsn4kerinci-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('Backup JSON berhasil diunduh.');
+        }
+
+        function importBackupJSON(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                try {
+                    const parsed = JSON.parse(reader.result);
+                    const incomingRecords = Array.isArray(parsed) ? parsed : (parsed.records || []);
+                    if (!Array.isArray(incomingRecords)) {
+                        throw new Error('Format tidak valid');
+                    }
+                    attendanceList = incomingRecords;
+                    saveAttendanceToStorage();
+
+                    if (parsed.metadata) {
+                        localStorage.setItem(STORAGE_KEY_META, JSON.stringify(parsed.metadata));
+                        loadMetadata();
+                    }
+                    applyFiltersAndRender();
+                    showToast(`Berhasil memulihkan ${attendanceList.length} data pengawas.`);
+                } catch (e) {
+                    showToast('File JSON backup tidak valid.', 'error');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // =====================================================================
+        // METADATA KOP, PENANDA TANGAN UTAMA & KETUA PANITIA UJIAN
+        // =====================================================================
+        function getCurrentMetadataFromInputs() {
+            return {
+                examTitle: document.getElementById('meta-exam-title').value,
+                academicYear: document.getElementById('meta-academic-year').value,
+                address: document.getElementById('meta-address').value,
+                signDate: document.getElementById('meta-sign-date').value,
+                headmasterRole: document.getElementById('meta-headmaster-role').value.trim() || 'Kepala MTsN 4 Kerinci',
+                headmaster: document.getElementById('meta-headmaster').value,
+                headmasterNip: document.getElementById('meta-headmaster-nip').value,
+                committee: document.getElementById('meta-committee').value.trim(),
+                committeeNip: document.getElementById('meta-committee-nip').value.trim()
+            };
+        }
+
+        function saveMetadata() {
+            const meta = getCurrentMetadataFromInputs();
+            localStorage.setItem(STORAGE_KEY_META, JSON.stringify(meta));
+            applyMetadataToUI(meta);
+        }
+
+        function loadMetadata() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY_META);
+                if (saved) {
+                    const meta = JSON.parse(saved);
+                    if (meta.examTitle !== undefined) document.getElementById('meta-exam-title').value = meta.examTitle;
+                    if (meta.academicYear !== undefined) document.getElementById('meta-academic-year').value = meta.academicYear;
+                    if (meta.address !== undefined) document.getElementById('meta-address').value = meta.address;
+                    if (meta.signDate !== undefined) document.getElementById('meta-sign-date').value = meta.signDate;
+                    if (meta.headmasterRole !== undefined) document.getElementById('meta-headmaster-role').value = meta.headmasterRole;
+                    if (meta.headmaster !== undefined) document.getElementById('meta-headmaster').value = meta.headmaster;
+                    if (meta.headmasterNip !== undefined) document.getElementById('meta-headmaster-nip').value = meta.headmasterNip;
+                    if (meta.committee !== undefined) document.getElementById('meta-committee').value = meta.committee;
+                    if (meta.committeeNip !== undefined) document.getElementById('meta-committee-nip').value = meta.committeeNip;
+                }
+            } catch (e) {}
+            saveMetadata();
+        }
+
+        function applyMetadataToUI(meta) {
+            document.getElementById('form-exam-banner').textContent = `${meta.examTitle} • TP ${meta.academicYear}`;
+            document.getElementById('doc-exam-title').textContent = meta.examTitle;
+            document.getElementById('doc-academic-year').textContent = meta.academicYear;
+            document.getElementById('doc-address').textContent = meta.address;
+            renderSignatureBlock(meta);
+        }
+
+        function renderSignatureBlock(meta) {
+            const container = document.getElementById('doc-signature-section');
+            const hasCommittee = Boolean(meta.committee && meta.committee.trim() !== '');
+
+            const committeeNipHtml = (meta.committeeNip && meta.committeeNip.trim() !== '')
+                ? `<div class="text-slate-800">${escapeHtml(meta.committeeNip)}</div>`
+                : '';
+
+            const headmasterNipHtml = (meta.headmasterNip && meta.headmasterNip.trim() !== '')
+                ? `<div class="text-slate-800">${escapeHtml(meta.headmasterNip)}</div>`
+                : '';
+
+            const mainSignatoryHtml = `
+                <div class="w-64 text-xs sm:text-[10.5pt] leading-snug">
+                    <div>${escapeHtml(meta.signDate)}</div>
+                    <div>Mengetahui,</div>
+                    <div class="font-semibold">${escapeHtml(meta.headmasterRole)}</div>
+                    <div class="h-16"></div>
+                    <div class="font-bold underline">${escapeHtml(meta.headmaster)}</div>
+                    ${headmasterNipHtml}
+                </div>
+            `;
+
+            const committeeSignatoryHtml = hasCommittee ? `
+                <div class="w-64 text-xs sm:text-[10.5pt] leading-snug">
+                    <div>${escapeHtml(meta.signDate)}</div>
+                    <div class="font-semibold">Ketua Panitia Ujian,</div>
+                    <div class="h-16"></div>
+                    <div class="font-bold underline">${escapeHtml(meta.committee)}</div>
+                    ${committeeNipHtml}
+                </div>
+            ` : '';
+
+            if (hasCommittee) {
+                container.className = 'sig-block mt-8 flex flex-col sm:flex-row justify-between gap-8';
+                container.innerHTML = `${committeeSignatoryHtml}${mainSignatoryHtml}`;
+            } else {
+                container.className = 'sig-block mt-8 flex justify-end';
+                container.innerHTML = mainSignatoryHtml;
+            }
+        }
+
+        // =====================================================================
+        // RENDER PRATINJAU DOKUMEN RESMI A4
+        // =====================================================================
+        function renderPreviewDocument() {
+            const tbody = document.getElementById('doc-table-body');
+            const filterSummaryEl = document.getElementById('doc-filter-summary');
+
+            const fDate = document.getElementById('filter-date').value;
+            const fRoom = document.getElementById('filter-room').value;
+            const fSession = document.getElementById('filter-session').value;
+            const fSearch = document.getElementById('filter-search').value.trim();
+
+            const activeFilters = [];
+            if (fDate) activeFilters.push(`Tanggal: ${fDate}`);
+            if (fRoom) activeFilters.push(`Ruang: ${fRoom}`);
+            if (fSession) activeFilters.push(`Sesi: ${fSession}`);
+            if (fSearch) activeFilters.push(`Cari: "${fSearch}"`);
+
+            if (filterSummaryEl) {
+                filterSummaryEl.textContent = activeFilters.length > 0
+                    ? `Filter: ${activeFilters.join(' | ')}`
+                    : 'Filter: Semua Data';
+            }
+
+            if (filteredList.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-6 text-slate-500">
+                            Belum ada data kehadiran pengawas untuk ditampilkan.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredList.map((item, index) => {
+                const timeText = item.arrivalTime ? `${escapeHtml(item.arrivalTime)} WIB` : '-';
+                const sessionInfo = getSessionDetails(item.session);
+                const sigHtml = item.signature
+                    ? `<img src="${item.signature}" alt="TTD ${escapeHtml(item.name)}" class="h-10 max-w-[96px] mx-auto object-contain">`
+                    : '';
+
+                return `
+                    <tr>
+                        <td class="text-center font-semibold">${index + 1}</td>
+                        <td>
+                            <div class="font-semibold">${escapeHtml(item.name)}</div>
+                            <div class="text-[10px] text-slate-600">NIP/NUPTK: ${escapeHtml(item.nip || '-')}</div>
+                        </td>
+                        <td class="text-center">${escapeHtml(item.room)}</td>
+                        <td>${escapeHtml(item.subject)}</td>
+                        <td class="text-center">
+                            <div>${escapeHtml(item.dateLabel)}</div>
+                            <div class="text-[10px] text-slate-600">Jam Hadir: ${timeText}</div>
+                        </td>
+                        <td class="text-center">
+                            <div class="font-semibold">${escapeHtml(sessionInfo.label)}</div>
+                            ${sessionInfo.range ? `<div class="text-[10px] text-slate-600">${escapeHtml(sessionInfo.range)}</div>` : ''}
+                        </td>
+                        <td class="text-center">${sigHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
